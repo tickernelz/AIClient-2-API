@@ -55,6 +55,7 @@ export const MODEL_PROTOCOL_PREFIX = {
     OPENAI_RESPONSES: 'openaiResponses',
     CLAUDE: 'claude',
     OLLAMA: 'ollama',
+    CODEX: 'codex',
 }
 
 export const MODEL_PROVIDER = {
@@ -68,6 +69,7 @@ export const MODEL_PROVIDER = {
     ORCHIDS_API: 'claude-orchids-oauth',
     QWEN_API: 'openai-qwen-oauth',
     IFLOW_API: 'openai-iflow',
+    CODEX_API: 'openai-codex-oauth',
 }
 
 /**
@@ -77,6 +79,11 @@ export const MODEL_PROVIDER = {
  * @returns {string} The protocol prefix (e.g., 'gemini', 'openai', 'claude').
  */
 export function getProtocolPrefix(provider) {
+    // Special case for Codex - it needs its own protocol
+    if (provider === 'openai-codex-oauth') {
+        return 'codex';
+    }
+
     const hyphenIndex = provider.indexOf('-');
     if (hyphenIndex !== -1) {
         return provider.substring(0, hyphenIndex);
@@ -338,7 +345,10 @@ export async function handleStreamRequest(res, service, model, requestBody, from
         // 凭证已被标记为不健康后，尝试切换到新凭证重试
         // 不再依赖状态码判断，只要凭证被标记不健康且可以重试，就尝试切换
         if (credentialMarkedUnhealthy && currentRetry < maxRetries && providerPoolManager && CONFIG) {
-            console.log(`[Stream Retry] Credential marked unhealthy. Attempting retry ${currentRetry + 1}/${maxRetries} with different credential...`);
+            // 增加10秒内的随机等待时间，避免所有请求同时切换凭证
+            const randomDelay = Math.floor(Math.random() * 10000); // 0-10000毫秒
+            console.log(`[Stream Retry] Credential marked unhealthy. Waiting ${randomDelay}ms before retry ${currentRetry + 1}/${maxRetries} with different credential...`);
+            await new Promise(resolve => setTimeout(resolve, randomDelay));
             
             try {
                 // 动态导入以避免循环依赖
@@ -468,7 +478,10 @@ export async function handleUnaryRequest(res, service, model, requestBody, fromP
         // 凭证已被标记为不健康后，尝试切换到新凭证重试
         // 不再依赖状态码判断，只要凭证被标记不健康且可以重试，就尝试切换
         if (credentialMarkedUnhealthy && currentRetry < maxRetries && providerPoolManager && CONFIG) {
-            console.log(`[Unary Retry] Credential marked unhealthy. Attempting retry ${currentRetry + 1}/${maxRetries} with different credential...`);
+            // 增加10秒内的随机等待时间，避免所有请求同时切换凭证
+            const randomDelay = Math.floor(Math.random() * 10000); // 0-10000毫秒
+            console.log(`[Unary Retry] Credential marked unhealthy. Waiting ${randomDelay}ms before retry ${currentRetry + 1}/${maxRetries} with different credential...`);
+            await new Promise(resolve => setTimeout(resolve, randomDelay));
             
             try {
                 // 动态导入以避免循环依赖
